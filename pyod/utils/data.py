@@ -8,19 +8,19 @@
 from __future__ import division
 from __future__ import print_function
 
-import numpy as np
 from warnings import warn
 
+import numpy as np
 from sklearn.datasets import make_blobs
-from sklearn.model_selection import train_test_split
-from sklearn.utils import column_or_1d
-from sklearn.utils import check_X_y
-from sklearn.utils import check_random_state
-from sklearn.utils import check_consistent_length
 from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import train_test_split
+from sklearn.utils import check_X_y
+from sklearn.utils import check_consistent_length
+from sklearn.utils import check_random_state
+from sklearn.utils import column_or_1d
 
-from .utility import precision_n_scores
 from .utility import check_parameter
+from .utility import precision_n_scores
 
 MAX_INT = np.iinfo(np.int32).max
 
@@ -192,6 +192,44 @@ def generate_data(n_train=1000, n_test=500, n_features=2, contamination=0.1,
 
     else:
         return X_train, X_test, y_train, y_test
+
+
+def generate_contextual_data(n_train=1000, n_test=500, n_features=2, n_contexts=2, contamination=0.1,
+                             train_only=False, offset=10, random_state=None):
+    assert n_train % n_contexts == 0, f"Cannot create {n_train} points with {n_contexts} contexts."
+    assert n_test % n_contexts == 0, f"Cannot create {n_test} points with {n_contexts} contexts."
+
+    # initialize a random state and seeds for the instance
+    random_state = check_random_state(random_state)
+    coefs_ = random_state.random_sample(n_contexts) + 0.001  # in case of underflow
+    offsets_ = random_state.choice(np.arange(offset), n_contexts, replace=False)
+
+    n_outliers_train = int(n_train * contamination / n_contexts)
+    n_inliers_train = int((n_train / n_contexts) - n_outliers_train)
+
+    n_outliers_test = int(n_test * contamination / n_contexts)
+    n_inliers_test = int((n_test / n_contexts) - n_outliers_test)
+
+    X_train, y_train, c_train, X_test, y_test, c_test = [[], [], [], [], [], []]
+    for i in range(n_contexts):
+        Xtrain, ytrain = _generate_data(n_inliers_train, n_outliers_train, n_features,
+                                        coefs_[i], offsets_[i], random_state)
+        Xtest, ytest = _generate_data(n_inliers_test, n_outliers_test, n_features,
+                                      coefs_[i], offsets_[i], random_state)
+        X_train.append(np.c_[np.full(n_inliers_train + n_outliers_train, i), Xtrain])
+        y_train.append(ytrain)
+        X_test.append(np.c_[np.full(n_inliers_test + n_outliers_test, i), Xtest])
+        y_test.append(ytest)
+
+    X_train = np.concatenate(X_train)
+    y_train = np.concatenate(y_train)
+    X_test = np.concatenate(X_test)
+    y_test = np.concatenate(y_test)
+
+    if train_only:
+        return X_train, y_train
+
+    return X_train, X_test, y_train, y_test
 
 
 def get_color_codes(y):
