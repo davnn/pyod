@@ -17,11 +17,11 @@ from sklearn.utils.testing import assert_true
 # if pyod is installed, no need to use the following line
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from pyod.models.contextual import ContextualDetector
+from pyod.models.partitioning import PartitioningDetector
 from pyod.utils.data import generate_contextual_data
 
 
-class TestContextualDetector(unittest.TestCase):
+class TestPartitioningDetector(unittest.TestCase):
     def setUp(self):
         self.n_train = 200
         self.n_test = 100
@@ -31,7 +31,7 @@ class TestContextualDetector(unittest.TestCase):
             n_train=self.n_train, n_test=self.n_test,
             contamination=self.contamination, random_state=42)
 
-        self.clf = ContextualDetector(contamination=self.contamination)
+        self.clf = PartitioningDetector(contamination=self.contamination)
         self.clf.fit(self.X_train)
 
     def test_parameters(self):
@@ -45,10 +45,10 @@ class TestContextualDetector(unittest.TestCase):
                     self.clf._mu is not None)
         assert_true(hasattr(self.clf, '_sigma') and
                     self.clf._sigma is not None)
-        assert_true(hasattr(self.clf, 'detectors_') and
-                    self.clf.detectors_ is not None)
-        assert_true(hasattr(self.clf, 'detectors_features_') and
-                    self.clf.detectors_features_ is not None)
+        assert_true(hasattr(self.clf, 'estimators_') and
+                    self.clf.estimators_ is not None)
+        assert_true(hasattr(self.clf, 'features_') and
+                    self.clf.features_ is not None)
 
     def test_train_scores(self):
         assert_equal(len(self.clf.decision_scores_), self.X_train.shape[0])
